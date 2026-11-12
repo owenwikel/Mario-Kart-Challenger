@@ -79,8 +79,8 @@ Aryan Patil, Preston Moore
 | `ChallengerModel.java` | Owen Wikel | [fill in] |
 | `ChallengerModelTest.java` | Owen Wikel | [fill in] |
 | `ChallengerView.java` | [name(s)] | [fill in] |
-| `ChallengerController.java` | [name(s)] | [fill in] |
-| `GameNightApp.java` | [name(s)] | [fill in] |
+| `ChallengerController.java` | Preston Moore | wrote, reviewed, GenAI-assisted |
+| `GameNightApp.java` | Preston Moore | wrote, reviewed, GenAI-assisted |
 
 ### GenAI Note
 
