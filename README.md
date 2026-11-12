@@ -38,13 +38,11 @@ recordWinner throws IllegalStateException when no race is active. Section 6 requ
 addPlayer and recordWinner also reject a null name.
 recordWinner ignores capitalization and extra spaces in the winner’s name.
 
-
 ### Did the model really stand alone?
 Yes. ChallengerModel has no Scanner or System.out. ChallengerModelTest only uses the model.
 
-
 ### What happened to our unknowns?
-Your scope’s unknowns list isn’t in the files you sent. If none of the unknowns were about the model, leave this one to your group.
+The main thing we had to work out while building was how to write a singly linked queue with `front`, `back` and `size`. That is done in : `LinkedQueue` and `Node` pass `LinkedQueueTest`, including emptying the queue and refilling it.
 
 ### What doesn't work yet?
 
@@ -52,22 +50,24 @@ Your scope’s unknowns list isn’t in the files you sent. If none of the unkno
 ## Next Steps (Deliverable 4)
 
 ### What is left to finish the MVP?
-
+- Run one full game night with all six menu options and try every bad-input case from Section 6 by hand.
 
 ### Our change feature
-
+- **Feature:** Win Streak Tracker. It counts consecutive wins for the current champion and resets when a new champion takes over.
+- **Classes we expect to change:**
+  - ChallengerModel (a streak field, updated in `recordWinner`, plus a getter)
+  - ChallengerView (a method to show the streak)
+  - ChallengerController (call that method after a winner is recorded)
+- **Classes that should NOT change:** Node, QueueInterface, LinkedQueue and GameNightApp, because the queue only stores names and main() only connects the parts.
 
 ### Which stretch goals will we attempt?
 
-
-| Win Streak Tracker | [Committing / Dropping] |
-| Leaderboard | [Committing / Dropping] |
-| Automatic Rejoining | [Committing / Dropping] |
-| Character Selection | [Committing / Dropping] |
+| Win Streak Tracker | Committing (our change feature) |
+| Leaderboard | Dropping (needs per-player win counts and a ranking display) |
+| Automatic Rejoining | Might still include for the second prototype(the model would have to re-add the loser after each race) |
+| Character Selection | Dropping  |
 
 ### What new tests will we need?
-
-
 
 
 ## Attribution
@@ -86,8 +86,7 @@ Your scope’s unknowns list isn’t in the files you sent. If none of the unkno
 
 ### GenAI Note
 
-
 - **Owen:** Used GenAI to check my tests were sufficient.
-- **Nishitha:** []
+- **Nishitha:** I used GenAI to help create my code and verify the test. Also to create a skeleton for the ReadMe file so it was easier to fill in
 - **Aryan:** []
 - **Preston:** I used GenAI to validate that my tests covered everything.
