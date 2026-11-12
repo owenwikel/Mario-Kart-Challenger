@@ -34,15 +34,17 @@ Aryan Patil, Preston Moore
 ## Reflection
 
 ### What changed from our specification?
-
+recordWinner throws IllegalStateException when no race is active. Section 6 required this, but the Section 5 table left it out.
+addPlayer and recordWinner also reject a null name.
+recordWinner ignores capitalization and extra spaces in the winner’s name.
 
 
 ### Did the model really stand alone?
-
+Yes. ChallengerModel has no Scanner or System.out. ChallengerModelTest only uses the model.
 
 
 ### What happened to our unknowns?
-
+Your scope’s unknowns list isn’t in the files you sent. If none of the unknowns were about the model, leave this one to your group.
 
 ### What doesn't work yet?
 
@@ -76,8 +78,8 @@ Aryan Patil, Preston Moore
 | `Node.java` | Nishitha Kancharla |wrote, reviewed, GenAI-assisted |
 | `LinkedQueue.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted |
 | `LinkedQueueTest.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted|
-| `ChallengerModel.java` | Owen Wikel | [fill in] |
-| `ChallengerModelTest.java` | Owen Wikel | [fill in] |
+| `ChallengerModel.java` | Owen Wikel | wrote, tested |
+| `ChallengerModelTest.java` | Owen Wikel | wrote, GenAI-assisted |
 | `ChallengerView.java` | [name(s)] | [fill in] |
 | `ChallengerController.java` | Preston Moore | wrote, reviewed, GenAI-assisted |
 | `GameNightApp.java` | Preston Moore | wrote, reviewed, GenAI-assisted |
@@ -85,7 +87,7 @@ Aryan Patil, Preston Moore
 ### GenAI Note
 
 
-- **Owen:** []
+- **Owen:** Used GenAI to check my tests were sufficient.
 - **Nishitha:** []
 - **Aryan:** []
 - **Preston:** []
