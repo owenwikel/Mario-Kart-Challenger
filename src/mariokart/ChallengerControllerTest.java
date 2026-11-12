@@ -281,7 +281,9 @@ public class ChallengerControllerTest
             "Winner must have participated in the recent race",
             view.lastError);
 
-        assertNull(model.getChampion());
+        // startNextRace() already made Alex champion; a bad winner
+        // must not change that.
+        assertEquals("Alex", model.getChampion());
 
     }
 
