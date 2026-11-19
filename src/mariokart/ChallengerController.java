@@ -6,6 +6,7 @@ package mariokart;
  * delegates game rules to the model, and displays results through the view.
  *
  * @author Preston Moore
+ * @author Aryan Patil (win streak display)
  * @version 2026.11.19
  */
 public class ChallengerController
@@ -68,10 +69,15 @@ public class ChallengerController
                         break;
                     case "4":
                         String winner = view.readName();
-                        view.showChampion(model.recordWinner(winner));
+                        String champion = model.recordWinner(winner);
+                        view.showChampion(champion);
+                        view.showStreak(champion, model.getStreak());
                         break;
                     case "5":
                         view.showChampion(model.getChampion());
+                        view.showStreak(
+                            model.getChampion(),
+                            model.getStreak());
                         break;
                     case "6":
                         running = false;

@@ -9,8 +9,8 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Tests every method in ChallengerView by feeding it typed input and checking
- * what it prints. Also runs one full game night through the real view,
+ * Tests every method in ChallengerView, including showStreak for the win
+ * streak feature, by feeding it typed input and checking what it prints. Also runs one full game night through the real view,
  * controller and model to check the MVP path end to end without crashing.
  *
  * @author Aryan Patil
@@ -272,6 +272,46 @@ public class ChallengerViewTest
 
 
     /**
+     * Tests that showStreak prints the champion and the count, using "race"
+     * for a streak of 1 and "races" for more.
+     */
+    public void testShowStreak()
+    {
+
+        ChallengerView view = makeView("");
+
+        view.showStreak("Alex", 1);
+        view.showStreak("Jordan", 3);
+
+        String text = printed();
+
+        assertTrue(text.contains("Alex has won 1 race in a row."));
+        assertTrue(text.contains("Jordan has won 3 races in a row."));
+
+    }
+
+
+    /**
+     * Tests that showStreak handles no champion and a streak of 0 without
+     * crashing.
+     */
+    public void testShowStreakNone()
+    {
+
+        ChallengerView view = makeView("");
+
+        view.showStreak(null, 0);
+        view.showStreak("Alex", 0);
+
+        String text = printed();
+
+        assertTrue(text.contains("No win streak yet."));
+        assertFalse(text.contains("in a row"));
+
+    }
+
+
+    /**
      * Tests that showError prints the message it is given, and a fallback
      * message when it is given nothing.
      */
@@ -294,15 +334,20 @@ public class ChallengerViewTest
 
     /**
      * Runs a full game night through the real view, controller and model: add
-     * three players, view the line, race, record a winner, race again, record
-     * again, show the champion and quit. Checks it never crashes and ends with
-     * the right champion.
+     * four players, view the line, then three races. The champion changes
+     * twice and then defends the title once, so the win streak resets to 1 and
+     * then grows to 2. Checks it never crashes and ends with the right
+     * champion and streak.
      */
     public void testFullGameNight()
     {
 
-        String typed = "1\nAlex\n" + "1\nJordan\n" + "1\nSam\n" + "2\n"
-            + "3\n" + "4\nJordan\n" + "3\n" + "4\nsam\n" + "5\n" + "6\n";
+        String typed = "1\nAlex\n" + "1\nJordan\n" + "1\nSam\n"
+            + "1\nTaylor\n" + "2\n"
+            + "3\n" + "4\nJordan\n" // Jordan beats Alex
+            + "3\n" + "4\nsam\n" // Sam beats Jordan
+            + "3\n" + "4\nSam\n" // Sam defends against Taylor
+            + "5\n" + "6\n";
 
         ChallengerModel model = new ChallengerModel();
         ChallengerController controller =
@@ -312,11 +357,16 @@ public class ChallengerViewTest
 
         String text = printed();
 
-        assertEquals("sam", model.getChampion());
+        assertEquals("Sam", model.getChampion());
+        assertEquals(2, model.getStreak());
         assertEquals(0, model.getLine().length);
         assertTrue(text.contains("Alex (champion) vs. Jordan (challenger)"));
         assertTrue(text.contains("Jordan (champion) vs. Sam (challenger)"));
+        assertTrue(text.contains("sam (champion) vs. Taylor (challenger)"));
         assertTrue(text.contains("Champion: Jordan"));
+        assertTrue(text.contains("Jordan has won 1 race in a row."));
+        assertTrue(text.contains("sam has won 1 race in a row."));
+        assertTrue(text.contains("Sam has won 2 races in a row."));
         assertFalse(text.contains("Error:"));
 
     }
@@ -333,6 +383,8 @@ public class ChallengerViewTest
         String typed = "9\n" // not a menu option
             + "\n" // just Enter
             + "1\n   \n" // blank name
+            + "1\nAAAAAAAAAAAAAAAAAAAAA\n" // 21 characters, too long
+            + "1\n!!!!\n" // no letters
             + "1\nAlex\n" + "1\n alex \n" // duplicate name
             + "3\n" // not enough players
             + "4\nAlex\n" // no race in progress
@@ -350,8 +402,10 @@ public class ChallengerViewTest
 
         int errors = text.split("Error:", -1).length - 1;
 
-        assertEquals(8, errors);
+        assertEquals(10, errors);
         assertEquals(0, model.getLine().length);
+        assertFalse(text.contains("in a row"));
+        assertEquals(0, model.getStreak());
         // The Alex vs. Jordan race is still active after the bad winner,
         // so the real winner can still be recorded.
         assertEquals("Jordan", model.recordWinner("Jordan"));

@@ -328,6 +328,58 @@ public class ChallengerControllerTest
         assertEquals(0, view.errorCount);
     }
 
+    /** Option 4 shows the new champion's win streak after each race. */
+    public void testRecordWinnerShowsStreak()
+    {
+        model.addPlayer("Alex");
+        model.addPlayer("Jordan");
+        model.addPlayer("Sam");
+        view.setChoices("3", "4", "3", "4", "6");
+        view.setNames("Jordan", "Jordan");
+        controller.run();
+        assertEquals(2, view.streakCount);
+        assertEquals("Jordan", view.lastStreakChampion);
+        assertEquals(2, view.lastStreak);
+        assertEquals(0, view.errorCount);
+    }
+
+
+    /** A rejected winner shows an error, not a streak. */
+    public void testInvalidWinnerShowsNoStreak()
+    {
+        model.addPlayer("Alex");
+        model.addPlayer("Jordan");
+        model.startNextRace();
+        view.setChoices("4", "6");
+        view.setNames("Sam");
+        controller.run();
+        assertEquals(0, view.streakCount);
+        assertEquals(1, view.errorCount);
+        assertEquals(0, model.getStreak());
+    }
+
+
+    /** Option 5 shows the streak, or no streak before any race. */
+    public void testViewChampionShowsStreak()
+    {
+        view.setChoices("5", "6");
+        controller.run();
+        assertEquals(1, view.streakCount);
+        assertNull(view.lastStreakChampion);
+        assertEquals(0, view.lastStreak);
+
+        model.addPlayer("Alex");
+        model.addPlayer("Jordan");
+        model.startNextRace();
+        model.recordWinner("Alex");
+        view.setChoices("5", "6");
+        controller.run();
+        assertEquals(2, view.streakCount);
+        assertEquals("Alex", view.lastStreakChampion);
+        assertEquals(1, view.lastStreak);
+    }
+
+
     /** Fake view supplies scripted input and records observable output. */
     private static class TestView
         extends ChallengerView
@@ -341,6 +393,9 @@ public class ChallengerControllerTest
         private int lineCount;
         private int raceCount;
         private int championCount;
+        private int streakCount;
+        private int lastStreak;
+        private String lastStreakChampion;
         private String lastError;
         private String lastChampion;
         private String[] lastLine;
@@ -412,6 +467,15 @@ public class ChallengerControllerTest
         {
             lastChampion = champion;
             championCount++;
+        }
+
+
+        @Override
+        public void showStreak(String champion, int streak)
+        {
+            lastStreakChampion = champion;
+            lastStreak = streak;
+            streakCount++;
         }
 
 

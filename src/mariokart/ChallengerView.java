@@ -196,6 +196,36 @@ public class ChallengerView
 
 
     /**
+     * Prints the current champion's win streak: how many races in a row they
+     * have won. The view only formats the two values it is given; the model
+     * decides what the streak is.
+     *
+     * @param champion
+     *            the champion's name, or null if there is no champion yet.
+     * @param streak
+     *            how many races in a row the champion has won.
+     */
+    public void showStreak(String champion, int streak)
+    {
+
+        if (champion == null || streak <= 0)
+        {
+            out.println("No win streak yet.");
+            return;
+        }
+
+        if (streak == 1)
+        {
+            out.println(champion + " has won 1 race in a row.");
+            return;
+        }
+
+        out.println(champion + " has won " + streak + " races in a row.");
+
+    }
+
+
+    /**
      * Prints an error message so the user knows what went wrong. The game
      * then goes back to the menu.
      *
