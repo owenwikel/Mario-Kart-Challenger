@@ -13,6 +13,7 @@ public class ChallengerModel {
     private String champion;
     private String challenger;
     private boolean raceActive;
+    private int streak;
     //~ Constructors ..........................................................
     /**
      * Creates a new model with an empty line, no champion,
@@ -22,6 +23,7 @@ public class ChallengerModel {
         champion = null;
         challenger = null;
         raceActive = false;
+        streak = 0;
         line = new LinkedQueue<String>();
     }
     //~Public  Methods ........................................................
@@ -37,6 +39,20 @@ public class ChallengerModel {
         name = name.strip();
         if (name.equals("")) {
             throw new IllegalArgumentException("Please enter a valid name.");
+        }
+        if (name.length() > 20) {
+            throw new IllegalArgumentException("Names must be 20 characters"
+                + " or fewer.");
+        }
+        boolean hasLetter = false;
+        for (int i = 0; i < name.length(); i++) {
+            if (Character.isLetter(name.charAt(i))) {
+                hasLetter = true;
+            }
+        }
+        if (!hasLetter) {
+            throw new IllegalArgumentException("Names must contain at least"
+                + " one letter.");
         }
         Object[] a = line.toArray();
         for (int i = 0; i < a.length; i++) {
@@ -93,7 +109,7 @@ public class ChallengerModel {
      * @throws IllegalArgumentException if user records winner as
      * non-participant.
      * @return the name of the winner.
-     * @throws IllegalStateException if race is active or name is null;
+     * @throws IllegalStateException if no race is active.
      */
     public String recordWinner(String name) throws IllegalArgumentException, 
     IllegalStateException {
@@ -112,6 +128,12 @@ public class ChallengerModel {
                 + " in the recent race");
         }
         raceActive = false;
+        if (name.equalsIgnoreCase(champion)) {
+            streak++;
+        }
+        else {
+            streak = 1;
+        }
         champion = name;
         challenger = null;
         return name;
@@ -123,6 +145,14 @@ public class ChallengerModel {
      */
     public String getChampion() {
         return this.champion;
+    }
+    
+    /**
+     * Returns how many races in a row the current champion has won.
+     * @return the win streak.
+     */
+    public int getStreak() {
+        return this.streak;
     }
     
     /**

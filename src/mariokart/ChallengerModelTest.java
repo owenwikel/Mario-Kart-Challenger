@@ -6,7 +6,7 @@ import student.TestCase;
  * Tests every method and rule in ChallengerModel.
  *
  * @author Owen Wikel
- * @version 2026.11.09
+ * @version 2026.11.18
  */
 public class ChallengerModelTest extends TestCase {
     //~ Fields ................................................................
@@ -70,6 +70,31 @@ public class ChallengerModelTest extends TestCase {
     }
 
     /**
+     * Tests addPlayer rejects a name over 20 characters and a name
+     * with no letters.
+     */
+    public void testAddPlayerNameRules() {
+        Exception thrown = null;
+        try {
+            model.addPlayer("abcdefghijklmnopqrstu");
+        }
+        catch (Exception e) {
+            thrown = e;
+        }
+        assertNotNull(thrown);
+
+        thrown = null;
+        try {
+            model.addPlayer("!!!!");
+        }
+        catch (Exception e) {
+            thrown = e;
+        }
+        assertNotNull(thrown);
+        assertEquals(0, model.getLine().length);
+    }
+
+    /**
      * Tests addPlayer rejects the champion and challenger.
      */
     public void testAddPlayerRacing() {
@@ -118,7 +143,7 @@ public class ChallengerModelTest extends TestCase {
 
     /**
      * Tests startNextRace rejects a second race, too few players,
-     * and an empty line.
+     * and an empty line, and names the champion in the message.
      */
     public void testStartNextRaceInvalid() {
         model.addPlayer("Alex");
@@ -152,6 +177,8 @@ public class ChallengerModelTest extends TestCase {
             thrown = e;
         }
         assertNotNull(thrown);
+        assertEquals("You must have two racers to start the next race.",
+            thrown.getMessage());
     }
 
     /**
@@ -191,5 +218,36 @@ public class ChallengerModelTest extends TestCase {
 
         assertEquals("Alex", model.recordWinner("Alex"));
         assertEquals("Alex", model.getChampion());
+    }
+
+    /**
+     * Tests the streak resets to 1 for a new champion and goes up
+     * when the champion wins again.
+     */
+    public void testGetStreak() {
+        model.addPlayer("Alex");
+        model.addPlayer("Jordan");
+        model.addPlayer("Sam");
+        model.startNextRace();
+        model.recordWinner("Jordan");
+        assertEquals(1, model.getStreak());
+        model.startNextRace();
+        model.recordWinner("Jordan");
+        assertEquals(2, model.getStreak());
+    }
+
+    /**
+     * Tests the streak does not change when recordWinner throws.
+     */
+    public void testStreakInvalid() {
+        Exception thrown = null;
+        try {
+            model.recordWinner("Alex");
+        }
+        catch (Exception e) {
+            thrown = e;
+        }
+        assertNotNull(thrown);
+        assertEquals(0, model.getStreak());
     }
 }
