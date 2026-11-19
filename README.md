@@ -8,12 +8,14 @@ Aryan Patil, Preston Moore
 
 ### Compile and run from a terminal
 From the project folder, with the CS 2114 `student.jar` somewhere on your computer. If your copy doesn't bundle JUnit, add `junit.jar` to the same classpath. On macOS/Linux use `:` instead of `;` in the classpath.
+
 ```
 javac -cp path/to/student.jar -d bin src/mariokart/*.java
 java -cp bin mariokart.GameNightApp
 java -cp "bin;path/to/student.jar" org.junit.runner.JUnitCore mariokart.LinkedQueueTest mariokart.ChallengerModelTest mariokart.ChallengerControllerTest mariokart.GameNightAppTest mariokart.ChallengerViewTest
 ```
-In Eclipse or VS Code, add `student.jar` to the build path, then right-click a test file and choose **Run as JUnit Test** (Eclipse) or **Run Tests** (VS Code).
+
+In Eclipse or VS Code, add `student.jar` to the build path, then right-click a test file and choose Run As > JUnit Test (Eclipse) or Run Tests (VS Code).
 
 ### The model on its own (no view)
 Run the JUnit tests (they use `student.TestCase`, so have the CS 2114 `student.jar` on the build path):
@@ -66,44 +68,50 @@ recordWinner ignores capitalization and extra spaces in the winner’s name.
 ### Deliverable 4: model side of the change (Owen)
 - **Classes the feature touched:** in the model, only `ChallengerModel` and `ChallengerModelTest`. This matched our D3 prediction: a new `streak` field set to 0 in the constructor, the streak update in `recordWinner`, and a new `getStreak()`. `Node`, `QueueInterface` and `LinkedQueue` did not change, and no `LinkedQueueTest` case had to change, so the feature did not leak into the queue.
 - **What surprised us:** where the streak update goes in `recordWinner` matters. It has to come after every check that can throw, so a bad winner never changes the streak. It also has to come before `champion = name`, or there is no old champion left to compare with.
-- **Model/view line:** on the model side the change did not cross the line. The model only gained `getStreak()`, which returns an `int`. The view will receive the champion's name and the count from the controller, never the model itself.
-- **What changed from the D3 plan:** `addPlayer` and `startNextRace` changed, even though D3 listed them under "should NOT change". Neither change was caused by the streak: `addPlayer` now enforces the name rules from our scope, and `startNextRace` has the clearer message. Both were already planned as separate MVP fixes in our D3 Next Steps. The "not enough players" message changed only in the `else` branch (a champion exists). The first-race message stays the same because there is no champion to name yet.
+- **Model/view line:** on the model side the change did not cross the line. The model only gained `getStreak()`, which returns an `int`. The view receives the champion's name and the count from the controller, never the model itself.
+- **What changed from the D3 plan:** `addPlayer` changed, even though D3 listed it under "should NOT change". This was not caused by the streak: `addPlayer` now enforces the name rules from our scope, which were already planned as a separate MVP fix in our D3 Next Steps.
 - **Tests:** `ChallengerModelTest` now has a normal case and a bad-input case for each new behavior:
   - `testGetStreak`: the streak resets to 1 for a new champion and goes up when the champion wins again.
   - `testStreakInvalid`: the streak stays at 0 when `recordWinner` throws.
   - `testAddPlayerNameRules`: a 21-character name and "!!!!" are rejected, and the line stays empty.
-  - `testStartNextRaceInvalid`: also checks the message "Nobody is waiting to challenge Alex."
 
   Compared with the D3 plan, we kept the smallest set of tests that still reaches every new branch, rather than every case we listed.
 
-### Deliverable 4: view and controller side of the change (Aryan)
+### Deliverable 4: view side of the change (Aryan)
 - **Classes the feature actually touched on this side:**
   - `ChallengerView`: one new method, `showStreak(String champion, int streak)`.
-  - `ChallengerController`: only cases `"4"` and `"5"` of `run()`, which now call `view.showStreak(champion, model.getStreak())` after `showChampion`.
-  - Tests: `ChallengerViewTest`, plus `ChallengerControllerTest`, whose fake `TestView` needed a `showStreak` override.
-- **Compared with our D3 prediction:** this matched. D3 said the view would gain `showStreak` and the controller would call it in cases 4 and 5, and that is all that changed. `showMenu`, `readChoice`, `readName`, `showLine`, `showRace`, `showChampion` and `showError` did not change, and neither did `GameNightApp`.
-- **What surprised us:**
-  - The controller's fake `TestView` had to change too. Any time the view gains a method the controller calls, the test double has to gain it as well.
-  - Preston's D4 cleanup had inlined `view.showChampion(model.recordWinner(winner))`. Case 4 had to go back to saving the champion in a local variable so it could also be passed to `showStreak`.
-- **Did the change cross the model/view line?** No. The view learned one new thing, an `int` count, and it still never sees `ChallengerModel`. The controller reads `getStreak()` and passes the plain number in. The view only decides how to word it ("race" vs. "races", and "No win streak yet." when there is no champion). It does not decide what the streak is.
+  - Tests: `ChallengerViewTest`.
+- **Compared with our D3 prediction:** this matched. D3 said the view would gain `showStreak`, and that is all that changed in the view. `showMenu`, `readChoice`, `readName`, `showLine`, `showRace`, `showChampion` and `showError` did not change, and neither did `GameNightApp`.
+- **Did the change cross the model/view line?** No. The view learned one new thing, an `int` count, and it still never sees `ChallengerModel`. The view only decides how to word it ("race" vs. "races", and "No win streak yet." when there is no champion). It does not decide what the streak is.
 - **What changed from the D3 plan:** the signature is exactly what D3 named. Two small additions: the wording switches between "race" and "races", and `showStreak(null, 0)` prints "No win streak yet." so option 5 works before the first race. On the test side, `testBadInputGameNight` now also types a 21-character name and "!!!!" through the real menu, which D3 Next Steps step 3 asked for.
 - **New tests:**
   - `ChallengerViewTest.testShowStreak` and `testShowStreakNone`
   - `testFullGameNight` now checks the streak resets to 1 for a new champion and grows to 2 when the champion defends
-  - `ChallengerControllerTest.testRecordWinnerShowsStreak`, `testInvalidWinnerShowsNoStreak` and `testViewChampionShowsStreak`
 
-  All 66 tests pass.
+### Deliverable 4: controller side of the change (Preston)
+- **Classes the feature actually touched on this side:**
+  - `ChallengerController`: only cases `"4"` and `"5"` of `run()`, which now call `view.showStreak(champion, model.getStreak())` after `showChampion`.
+  - Tests: `ChallengerControllerTest`, whose fake `TestView` needed a `showStreak` override.
+- **Compared with our D3 prediction:** this matched. D3 said the controller would call `showStreak` in cases 4 and 5, and nothing else in the controller changed.
+- **What surprised us:**
+  - The controller's fake `TestView` had to change too. Any time the view gains a method the controller calls, the test double has to gain it as well.
+  - An earlier cleanup had inlined `view.showChampion(model.recordWinner(winner))`. Case 4 had to go back to saving the champion in a local variable so it could also be passed to `showStreak`.
+- **Did the change cross the model/view line?** No. The controller reads `getStreak()` from the model and passes the plain number to the view. The view still never sees the model.
+- **New tests:** `ChallengerControllerTest.testRecordWinnerShowsStreak`, `testInvalidWinnerShowsNoStreak` and `testViewChampionShowsStreak`.
+- **Full game night by hand:** Preston ran `GameNightApp`, used all six menu options, and tried every bad-input case from the scope.
+
+All 66 tests pass.
 
 ### Did the model really stand alone?
 Yes. ChallengerModel has no Scanner or System.out. ChallengerModelTest only uses the model.
 Nothing had to cross the line to make the view work. ChallengerView never imports or mentions ChallengerModel, LinkedQueue or Node. It only receives `String` and `String[]` values from the controller, and the controller turns model exceptions into message text before the view sees them.
 
 ### What happened to our unknowns?
-The main thing we had to work out while building was how to write a singly linked queue with `front`, `back` and `size`. That is done in : `LinkedQueue` and `Node` pass `LinkedQueueTest`, including emptying the queue and refilling it.
+The main thing we had to work out while building was how to write a singly linked queue with `front`, `back` and `size`. That is done in `LinkedQueue` and `Node`, which pass `LinkedQueueTest`, including emptying the queue and refilling it.
 
 ### What doesn't work yet?
 - **Bad input:** fixed in D4. `addPlayer` now rejects names longer than 20 characters and names with no letters, and leaves the line unchanged.
-- **Error wording:** not fixed yet. The code and `ChallengerModelTest` still use "You must have two racers to start the next race." The "Nobody is waiting to challenge Alex" message mentioned above was planned but isn't in `startNextRace` yet.
+- **Error wording:** not fixed yet. The code and `ChallengerModelTest` still use "You must have two racers to start the next race." The "Nobody is waiting to challenge Alex" message was planned but isn't in `startNextRace` yet.
 - **Win streak display:** done. After option 4 or 5 the menu prints, for example, "Alex has won 2 races in a row."
 - **Champion's name capitalization:** if the winner is typed as "alex", the champion is stored as "alex" instead of "Alex". The streak still counts correctly, because names are compared ignoring case, but the display uses the typed spelling.
 - **Losers:** a player who loses leaves the game and has to use Add Player again. That is the MVP behavior. Automatic Rejoining is a stretch goal.
@@ -133,7 +141,7 @@ In the order we will do them:
 2. **View Line** (option 2) to show FIFO order.
 3. **Next Race** (option 3): Alex vs. Jordan. Press 3 again to show a second race can't start yet.
 4. **Record Winner** (option 4): first type "Sam" to show a non-racer is rejected, then "Jordan". Jordan becomes champion with "1 race in a row."
-5. **Next Race, then Record Winner** with Jordan again: the streak grows to 2. **Show Champion** (option 5) shows "Jordan has won 2 races in a row."
+5. **Next Race, then Record Winner with Jordan again:** the streak grows to 2. Show Champion (option 5) shows "Jordan has won 2 races in a row."
 6. **Next Race:** Jordan vs. Taylor, and Taylor wins, so the streak resets to 1. If Automatic Rejoining is done, show Jordan back at the end of the line (option 2).
 7. **Quit** (option 6). Then briefly show `ChallengerModelTest` passing to prove the model works without the view.
 
@@ -144,7 +152,7 @@ In the order we will do them:
 | Clearer message and champion spelling in `ChallengerModel`, with tests | Owen Wikel | Wrote `ChallengerModel` and `ChallengerModelTest` |
 | Automatic Rejoining in `recordWinner`, with model tests | Nishitha Kancharla | Wrote the queue the loser rejoins |
 | "Rejoined the line" message in `ChallengerView`, and updated view and end-to-end tests | Aryan Patil | Wrote `ChallengerView`, `ChallengerViewTest` and the streak display |
-| Passing the rejoined name from `ChallengerController`, and controller tests | Preston Moore | Wrote `ChallengerController` and its tests |
+| Passing the rejoined name from `ChallengerController`, and controller tests | Preston Moore | Wrote `ChallengerController`, its tests and the streak wiring |
 | Full game night by hand and the demo rehearsal | Preston Moore, with Aryan Patil | Own the menu loop and the view |
 | Final README reflection and attribution | Nishitha Kancharla, with everyone adding their own rows | Set up the README |
 
@@ -152,88 +160,51 @@ In the order we will do them:
 
 ### What is left to finish the MVP?
 In the order we will do them:
-1. **Name rules in the model** (Owen, **done**): `ChallengerModel.addPlayer` rejects names longer than 20 characters and names with no letters (for example "!!!!"), and leaves the line unchanged. This is the last bad-input rule from our scope that isn't enforced.
-2. **Clearer "not enough players" message** (Owen, **done**): `startNextRace` names who is missing, for example "Nobody is waiting to challenge Alex", instead of "You must have two racers…". Only the message text changes. The view already prints whatever message it gets, so it doesn't change.
-3. **Tests for 1 and 2** (Owen, **done**): new cases in `ChallengerModelTest`. Then Aryan adds the two new bad inputs to `ChallengerViewTest.testBadInputGameNight` so they are also checked through the real menu.
-4. **Full game night by hand** (Preston, with Aryan): run `GameNightApp`, use all six menu options, and try every bad-input case from the scope. Anything that crashes or reads badly goes back to the owner of that class.
+1. **Name rules in the model** (Owen, **done**): `ChallengerModel.addPlayer` rejects names longer than 20 characters and names with no letters (for example "!!!!"), and leaves the line unchanged.
+2. **Clearer "not enough players" message** (Owen): `startNextRace` names who is missing, for example "Nobody is waiting to challenge Alex", instead of "You must have two racers…". Moved to the final build.
+3. **Tests for 1 and 2** (Owen, **done for 1**): new cases in `ChallengerModelTest`. Aryan added the two new bad inputs to `ChallengerViewTest.testBadInputGameNight` (**done**).
+4. **Full game night by hand** (Preston, with Aryan, **done**): run `GameNightApp`, use all six menu options, and try every bad-input case from the scope.
 
 ### Our change feature
-- **Feature:** Win Streak Tracker. It counts how many races in a row the current champion has won, and resets when a new champion takes over. It adds model state (a streak count) and logic (when to add to it or reset it), and users reach it through the menu. That makes it a non-trivial feature, not just a new label.
-- **Classes and methods we expect to change:**
-  - **ChallengerModel (model), done:**
-    - a new field, `private int streak`, set to 0 in the constructor
-    - `recordWinner(String name)`: if the winner is already the champion, `streak++`; otherwise `streak = 1`
-    - a new `getStreak()` getter
-  - **ChallengerView (view):** a new `showStreak(String champion, int streak)` that prints, for example, "Alex has won 3 in a row."
-  - **ChallengerController (controller):** in `run()`, case `"4"` calls `view.showStreak(champion, model.getStreak())` after `showChampion`, and case `"5"` does the same.
+- **Feature:** Win Streak Tracker. It counts how many races in a row the current champion has won, and resets when a new champion takes over. It adds model state (a streak count) and logic (when to add to it or reset it), and users reach it through the menu.
+- **Classes and methods we expected to change:**
+  - **ChallengerModel (model):** a new field `private int streak`, set to 0 in the constructor; `recordWinner` adds to or resets it; a new `getStreak()` getter.
+  - **ChallengerView (view):** a new `showStreak(String champion, int streak)`.
+  - **ChallengerController (controller):** in `run()`, cases `"4"` and `"5"` call `view.showStreak(champion, model.getStreak())` after `showChampion`.
 - **What should NOT change:**
-  - **Whole classes:** `Node`, `QueueInterface`, `LinkedQueue` and `GameNightApp`. The streak belongs to the champion, who isn't in the queue, and `main()` only connects the parts.
+  - **Whole classes:** `Node`, `QueueInterface`, `LinkedQueue` and `GameNightApp`.
   - **In ChallengerModel:** `addPlayer`, `startNextRace` and `getLine`.
   - **In ChallengerView:** `showMenu`, `readChoice`, `readName`, `showLine` and `showRace`.
-
-  If any of these does need to change, our model/view line is in the wrong place, and we'll explain why in the Deliverable 4 reflection.
 
 ### Which stretch goals will we attempt?
 
 | Stretch goal | Decision |
 |---|---|
 | Win Streak Tracker | **Committing.** It is our change feature. |
-| Automatic Rejoining | **Committing after the Win Streak Tracker works.** The model re-adds the loser to the back of the line in `recordWinner` (one `line.enqueue(loser)` call), so it reuses the queue we already have. |
-| Leaderboard | **Dropping.** It needs win counts for every player and a ranking display, which is too much for one more deliverable. |
-| Character Selection | **Dropping.** It is mostly extra display and adds little to the queue logic. |
-
-### What new tests will we need?
-- **`ChallengerModelTest`:**
-  - **Name rules (Owen):** `addPlayer` rejects a 21-character name, accepts a 20-character name, rejects "!!!!" and "123", and leaves the line unchanged after each rejection.
-  - **Clearer message (Owen):** the new "nobody is waiting" message names the champion.
-  - **Win streak (Owen):**
-    - `getStreak()` is 0 before any race.
-    - The streak is 1 after the first race.
-    - It goes up when the champion wins again.
-    - It resets to 1 when the challenger wins.
-    - It stays the same when `recordWinner` throws (no race active, or the winner wasn't racing).
-  - **Automatic rejoining (Nishitha):** the loser is at the back of the line after `recordWinner`, and the winner is not in the line.
-- **`ChallengerViewTest` (Aryan):**
-  - `showStreak` prints the name and the count, and handles a null champion.
-  - `testFullGameNight` checks the streak text after each race.
-- **`ChallengerControllerTest` (Preston):**
-  - After option 4 the streak is shown, and after a rejected winner it isn't.
-  - Option 5 shows the streak.
-  - The fake `TestView` needs a `showStreak` override.
-- **`LinkedQueueTest` (Nishitha):** no new cases, because the queue doesn't change. If any queue test has to change, that tells us the feature leaked into the queue.
-
-### Who does what?
-
-| Remaining item | Owner | Why them |
-|---|---|---|
-| Name rules and clearer error message in `ChallengerModel`, and their tests | Owen Wikel | Wrote `ChallengerModel` and `ChallengerModelTest` |
-| Win streak in `ChallengerModel` (`streak`, `recordWinner`, `getStreak`) and its tests | Owen Wikel | Same class and tests |
-| `showStreak` in `ChallengerView`, and the new view and end-to-end tests | Aryan Patil | Wrote `ChallengerView` and `ChallengerViewTest` |
-| Wiring the streak into `ChallengerController.run()` (cases 4 and 5), `TestView` and the controller tests | Preston Moore | Wrote `ChallengerController` and its tests |
-| Full game night by hand with every bad-input case | Preston Moore, with Aryan Patil | Owns the menu loop and the view |
-| Automatic Rejoining in `recordWinner`, and its tests | Nishitha Kancharla | Wrote the queue that the loser rejoins |
-| Deliverable 4 README: comparing what actually changed with this prediction, and the attribution table | Nishitha Kancharla, with everyone adding their own rows | Set up the README skeleton |
+| Automatic Rejoining | **Committing after the Win Streak Tracker works.** |
+| Leaderboard | **Dropping.** |
+| Character Selection | **Dropping.** |
 
 ## Attribution
 
 | File | Who worked on it | How |
 |---|---|---|
 | `QueueInterface.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted |
-| `Node.java` | Nishitha Kancharla |wrote, reviewed, GenAI-assisted |
+| `Node.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted |
 | `LinkedQueue.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted |
-| `LinkedQueueTest.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted|
+| `LinkedQueueTest.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted |
 | `ChallengerModel.java` | Owen Wikel | wrote, tested, GenAI-assisted, reviewed |
-| `ChallengerModelTest.java` | Owen Wikel | wrote, GenAI-assisted, GenAI-assisted, reviewed, ran |
+| `ChallengerModelTest.java` | Owen Wikel | wrote, GenAI-assisted GenAI-assisted, reviewed, ran |
 | `ChallengerView.java` | Aryan Patil | wrote with GenAI assistance (including D4 `showStreak`), reviewed, tested |
 | `ChallengerViewTest.java` | Aryan Patil | wrote with GenAI assistance (including D4 streak and new bad-input tests), reviewed, ran |
-| `ChallengerController.java` | Preston Moore, Aryan Patil | Preston wrote, reviewed, GenAI-assisted; Aryan added the `showStreak` calls in cases 4 and 5 (GenAI-assisted) |
-| `ChallengerControllerTest.java` | Preston Moore, Aryan Patil | Preston wrote, GenAI-assisted; Aryan revised one assertion in `testInvalidWinner`, and added the three streak tests and the `TestView.showStreak` override (GenAI-assisted) |
+| `ChallengerController.java` | Preston Moore | wrote, reviewed, GenAI-assisted; added the D4 `showStreak` calls in cases 4 and 5 |
+| `ChallengerControllerTest.java` | Preston Moore, Aryan Patil | Preston wrote, GenAI-assisted, and added the three D4 streak tests and the `TestView.showStreak` override; Aryan revised one assertion in `testInvalidWinner` (GenAI-assisted) |
 | `GameNightApp.java` | Preston Moore | wrote, reviewed, GenAI-assisted |
 | `GameNightAppTest.java` | Preston Moore | wrote, GenAI-assisted |
 
 ### GenAI Note
 
-- **Owen:** Used GenAI to check my tests were sufficient. 
-- **Nishitha:** I used GenAI to help create my code and verify the test. Also to create a skeleton for the ReadMe file so it was easier to fill in
-- **Aryan:** I used GenAI (Claude) to write `ChallengerView`, `ChallengerViewTest` and the D4 win streak display (view, controller calls and tests), and to draft my Reflection and Next Steps sections. I reviewed everything, checked that the view never references the model, and ran all tests to confirm they pass.
-- **Preston:** I used GenAI to validate that my tests covered everything.
+- **Owen:** Used GenAI to check my tests were sufficient.
+- **Nishitha:** I used GenAI to help create my code and verify the test. Also to create a skeleton for the ReadMe file so it was easier to fill in.
+- **Aryan:** I used GenAI (Claude) to write `ChallengerView`, `ChallengerViewTest` and the D4 `showStreak` display and its view tests, and to draft my Reflection and Next Steps sections. I reviewed everything, checked that the view never references the model, and ran all tests to confirm they pass.
+- **Preston:** I used GenAI to validate that my tests covered everything. For D4, I wired the streak into the controller (cases 4 and 5), added the `TestView` override and the controller streak tests, and ran the full game night by hand.
