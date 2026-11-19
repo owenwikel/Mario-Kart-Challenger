@@ -33,7 +33,7 @@ Run the JUnit tests (they use `student.TestCase`, so have the CS 2114 `student.j
 | Model | `QueueInterface<T>` | The queue contract |
 | Model | `Node<T>` | One link in the queue (data + next) |
 | Model | `LinkedQueue<T>` | Hand-written singly linked FIFO waiting line |
-| Model | `ChallengerModel` | Game state and rules (line, champion, challenger, raceActive) |
+| Model | `ChallengerModel` | Game state and rules (line, champion, challenger, raceActive, win streak) |
 | View | `ChallengerView` | All input and output (Scanner and System.out) |
 | Controller | `ChallengerController` | Menu loop; turns each choice into one model call |
 | Controller | `GameNightApp` | `main()`; builds and connects model, view and controller |
@@ -54,6 +54,19 @@ recordWinner ignores capitalization and extra spaces in the winner’s name.
 - **Display:** `showChampion(null)` prints "No champion yet" and `showLine` prints "Nobody is waiting in line" for an empty line. The spec didn't say what to show before the first race.
 - **Tests:** the spec only planned unit tests for each class. We added two end-to-end tests to `ChallengerViewTest` (`testFullGameNight`, `testBadInputGameNight`) that run typed input through the real view, controller and model. They show the MVP path and the scope's bad-input cases run without crashing.
 
+### Deliverable 4: model side of the change (Owen)
+- **Classes the feature touched:** in the model, only `ChallengerModel` and `ChallengerModelTest`. This matched our D3 prediction: a new `streak` field set to 0 in the constructor, the streak update in `recordWinner`, and a new `getStreak()`. `Node`, `QueueInterface` and `LinkedQueue` did not change, and no `LinkedQueueTest` case had to change, so the feature did not leak into the queue.
+- **What surprised us:** where the streak update goes in `recordWinner` matters. It has to come after every check that can throw, so a bad winner never changes the streak. It also has to come before `champion = name`, or there is no old champion left to compare with.
+- **Model/view line:** on the model side the change did not cross the line. The model only gained `getStreak()`, which returns an `int`. The view will receive the champion's name and the count from the controller, never the model itself.
+- **What changed from the D3 plan:** `addPlayer` and `startNextRace` changed, even though D3 listed them under "should NOT change". Neither change was caused by the streak: `addPlayer` now enforces the name rules from our scope, and `startNextRace` has the clearer message. Both were already planned as separate MVP fixes in our D3 Next Steps. The "not enough players" message changed only in the `else` branch (a champion exists). The first-race message stays the same because there is no champion to name yet.
+- **Tests:** `ChallengerModelTest` now has a normal case and a bad-input case for each new behavior:
+  - `testGetStreak`: the streak resets to 1 for a new champion and goes up when the champion wins again.
+  - `testStreakInvalid`: the streak stays at 0 when `recordWinner` throws.
+  - `testAddPlayerNameRules`: a 21-character name and "!!!!" are rejected, and the line stays empty.
+  - `testStartNextRaceInvalid`: also checks the message "Nobody is waiting to challenge Alex."
+
+  Compared with the D3 plan, we kept the smallest set of tests that still reaches every new branch, rather than every case we listed.
+
 ### Did the model really stand alone?
 Yes. ChallengerModel has no Scanner or System.out. ChallengerModelTest only uses the model.
 Nothing had to cross the line to make the view work. ChallengerView never imports or mentions ChallengerModel, LinkedQueue or Node. It only receives `String` and `String[]` values from the controller, and the controller turns model exceptions into message text before the view sees them.
@@ -62,23 +75,24 @@ Nothing had to cross the line to make the view work. ChallengerView never import
 The main thing we had to work out while building was how to write a singly linked queue with `front`, `back` and `size`. That is done in : `LinkedQueue` and `Node` pass `LinkedQueueTest`, including emptying the queue and refilling it.
 
 ### What doesn't work yet?
-- **Bad input still allowed:** names longer than 20 characters and names with no letters (for example "!!!!") are accepted. The scope says they should be rejected, but `addPlayer` doesn't check for them yet.
-- **Error wording:** "Next Race" without enough players says "You must have two racers…" instead of naming who is missing (for example "Nobody is waiting to challenge Alex").
+- **Bad input:** fixed in D4. `addPlayer` now rejects names longer than 20 characters and names with no letters, and leaves the line unchanged.
+- **Error wording:** fixed in D4. "Next Race" with nobody waiting now says "Nobody is waiting to challenge Alex."
+- **Win streak display:** the model tracks the streak, but it is not shown in the menu until `showStreak` (view) and cases 4 and 5 (controller) are added.
 - **Losers:** a player who loses leaves the game and has to use Add Player again. That is the MVP behavior. Automatic Rejoining is a stretch goal.
 
 ## Next Steps (Deliverable 4)
 
 ### What is left to finish the MVP?
 In the order we will do them:
-1. **Name rules in the model** (Owen): `ChallengerModel.addPlayer` rejects names longer than 20 characters and names with no letters (for example "!!!!"), and leaves the line unchanged. This is the last bad-input rule from our scope that isn't enforced.
-2. **Clearer "not enough players" message** (Owen): `startNextRace` names who is missing, for example "Nobody is waiting to challenge Alex", instead of "You must have two racers…". Only the message text changes. The view already prints whatever message it gets, so it doesn't change.
-3. **Tests for 1 and 2** (Owen): new cases in `ChallengerModelTest`. Then Aryan adds the two new bad inputs to `ChallengerViewTest.testBadInputGameNight` so they are also checked through the real menu.
+1. **Name rules in the model** (Owen, **done**): `ChallengerModel.addPlayer` rejects names longer than 20 characters and names with no letters (for example "!!!!"), and leaves the line unchanged. This is the last bad-input rule from our scope that isn't enforced.
+2. **Clearer "not enough players" message** (Owen, **done**): `startNextRace` names who is missing, for example "Nobody is waiting to challenge Alex", instead of "You must have two racers…". Only the message text changes. The view already prints whatever message it gets, so it doesn't change.
+3. **Tests for 1 and 2** (Owen, **done**): new cases in `ChallengerModelTest`. Then Aryan adds the two new bad inputs to `ChallengerViewTest.testBadInputGameNight` so they are also checked through the real menu.
 4. **Full game night by hand** (Preston, with Aryan): run `GameNightApp`, use all six menu options, and try every bad-input case from the scope. Anything that crashes or reads badly goes back to the owner of that class.
 
 ### Our change feature
 - **Feature:** Win Streak Tracker. It counts how many races in a row the current champion has won, and resets when a new champion takes over. It adds model state (a streak count) and logic (when to add to it or reset it), and users reach it through the menu. That makes it a non-trivial feature, not just a new label.
 - **Classes and methods we expect to change:**
-  - **ChallengerModel (model):**
+  - **ChallengerModel (model), done:**
     - a new field, `private int streak`, set to 0 in the constructor
     - `recordWinner(String name)`: if the winner is already the champion, `streak++`; otherwise `streak = 1`
     - a new `getStreak()` getter
@@ -140,8 +154,8 @@ In the order we will do them:
 | `Node.java` | Nishitha Kancharla |wrote, reviewed, GenAI-assisted |
 | `LinkedQueue.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted |
 | `LinkedQueueTest.java` | Nishitha Kancharla | wrote, reviewed, GenAI-assisted|
-| `ChallengerModel.java` | Owen Wikel | wrote, tested |
-| `ChallengerModelTest.java` | Owen Wikel | wrote, GenAI-assisted |
+| `ChallengerModel.java` | Owen Wikel | wrote, tested, GenAI-assisted, reviewed |
+| `ChallengerModelTest.java` | Owen Wikel | wrote, GenAI-assisted, GenAI-assisted, reviewed, ran |
 | `ChallengerView.java` | Aryan Patil | wrote with GenAI assistance, reviewed, tested |
 | `ChallengerViewTest.java` | Aryan Patil | wrote with GenAI assistance, reviewed, ran |
 | `ChallengerController.java` | Preston Moore | wrote, reviewed, GenAI-assisted |
@@ -151,7 +165,7 @@ In the order we will do them:
 
 ### GenAI Note
 
-- **Owen:** Used GenAI to check my tests were sufficient.
+- **Owen:** Used GenAI to check my tests were sufficient. 
 - **Nishitha:** I used GenAI to help create my code and verify the test. Also to create a skeleton for the ReadMe file so it was easier to fill in
 - **Aryan:** I used GenAI (Claude) to write `ChallengerView` and `ChallengerViewTest` to match the controller's method calls, and to draft my Reflection and Next Steps sections. I reviewed everything, checked that the view never references the model, and ran all tests to confirm they pass.
 - **Preston:** I used GenAI to validate that my tests covered everything.
