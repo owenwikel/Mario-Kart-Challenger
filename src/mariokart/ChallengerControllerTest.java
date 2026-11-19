@@ -4,457 +4,422 @@ package mariokart;
 import student.TestCase;
 
 /**
- * Tests every menu choice and error handling rule in ChallengerController.
+ * Tests menu dispatch, error recovery, and model/view integration.
  *
  * @author Preston Moore
- * @version 2026.11.12
+ * @version 2026.11.19
  */
 public class ChallengerControllerTest
     extends TestCase
 {
-
-    // ~ Fields ................................................................
-
     private ChallengerModel model;
-
     private TestView view;
-
     private ChallengerController controller;
 
-    // ~ Setup .................................................................
-
-    /**
-     * Makes a fresh model, view, and controller before each test.
-     */
+    /** Creates fresh collaborators for each test. */
     public void setUp()
     {
-
         model = new ChallengerModel();
-
         view = new TestView();
-
         controller = new ChallengerController(model, view);
-
     }
 
-    // ~ Public Methods ........................................................
 
-
-    /**
-     * Tests that the constructor rejects a null model or view.
-     */
+    /** Rejects missing collaborators with the documented exception type. */
     public void testConstructorInvalid()
     {
-
-        Exception thrown = null;
-
-        try
-        {
-            new ChallengerController(null, view);
-        }
-        catch (Exception e)
-        {
-            thrown = e;
-        }
-
-        assertNotNull(thrown);
-
-        thrown = null;
-
-        try
-        {
-            new ChallengerController(model, null);
-        }
-        catch (Exception e)
-        {
-            thrown = e;
-        }
-
-        assertNotNull(thrown);
-
+        assertConstructorRejected(null, view);
+        assertConstructorRejected(model, null);
+        assertConstructorRejected(null, null);
     }
 
 
-    /**
-     * Tests option 1 adds a player to the waiting line.
-     */
+    private void assertConstructorRejected(ChallengerModel m, ChallengerView v)
+    {
+        try
+        {
+            new ChallengerController(m, v);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException expected)
+        {
+            assertEquals(
+                "Model and view cannot be null.",
+                expected.getMessage());
+        }
+    }
+
+
+    /** Option 1 trims and queues a name. */
     public void testAddPlayer()
     {
-
-        view.setChoices("1", "6");
-        view.setNames("Alex");
-
+        view.setChoices(" 1 ", "6");
+        view.setNames("  Alex  ");
         controller.run();
-
         assertEquals(1, model.getLine().length);
         assertEquals("Alex", model.getLine()[0]);
-
+        assertEquals(0, view.errorCount);
     }
 
 
-    /**
-     * Tests option 2 displays the waiting line.
-     */
+    /** Option 2 displays the queue in FIFO order without changing it. */
     public void testViewLine()
     {
-
         model.addPlayer("Alex");
         model.addPlayer("Jordan");
-
         view.setChoices("2", "6");
-
         controller.run();
-
         assertEquals(1, view.lineCount);
+        assertEquals(2, view.lastLine.length);
         assertEquals("Alex", view.lastLine[0]);
         assertEquals("Jordan", view.lastLine[1]);
-
+        assertEquals(2, model.getLine().length);
     }
 
 
-    /**
-     * Tests option 3 starts a race and displays both racers.
-     */
+    /** Option 2 also works with an empty queue. */
+    public void testViewEmptyLine()
+    {
+        view.setChoices("2", "6");
+        controller.run();
+        assertEquals(1, view.lineCount);
+        assertEquals(0, view.lastLine.length);
+        assertEquals(0, view.errorCount);
+    }
+
+
+    /** Option 3 starts a race and sends both racers to the view. */
     public void testStartNextRace()
     {
-
         model.addPlayer("Alex");
         model.addPlayer("Jordan");
-
+        model.addPlayer("Sam");
         view.setChoices("3", "6");
-
         controller.run();
-
+        assertEquals(1, view.raceCount);
         assertEquals("Alex", view.firstRacer);
         assertEquals("Jordan", view.secondRacer);
-        assertEquals(1, view.raceCount);
-
+        assertEquals("Sam", model.getLine()[0]);
+        assertEquals(0, view.errorCount);
     }
 
 
-    /**
-     * Tests option 4 records a winner and displays the champion.
-     */
+    /** Option 4 records the winner and shows the new champion. */
     public void testRecordWinner()
     {
-
         model.addPlayer("Alex");
         model.addPlayer("Jordan");
         model.startNextRace();
-
         view.setChoices("4", "6");
-        view.setNames("Jordan");
-
+        view.setNames(" jordan ");
         controller.run();
-
-        assertEquals("Jordan", model.getChampion());
-        assertEquals("Jordan", view.lastChampion);
-
+        assertEquals("jordan", model.getChampion());
+        assertEquals("jordan", view.lastChampion);
+        assertEquals(1, view.championCount);
+        assertEquals(1, model.getStreak());
+        assertEquals(0, view.errorCount);
     }
 
 
-    /**
-     * Tests option 5 displays the current champion.
-     */
+    /** Option 5 shows the champion without changing game state. */
     public void testViewChampion()
     {
-
         model.addPlayer("Alex");
         model.addPlayer("Jordan");
         model.startNextRace();
         model.recordWinner("Alex");
-
         view.setChoices("5", "6");
-
         controller.run();
-
         assertEquals("Alex", view.lastChampion);
-
+        assertEquals(1, view.championCount);
+        assertEquals(1, model.getStreak());
     }
 
 
-    /**
-     * Tests option 6 exits the game.
-     */
+    /** Option 5 passes null to the view when no champion exists. */
+    public void testViewChampionNone()
+    {
+        view.setChoices("5", "6");
+        controller.run();
+        assertEquals(1, view.championCount);
+        assertNull(view.lastChampion);
+        assertEquals(0, view.errorCount);
+    }
+
+
+    /** Option 6 quits immediately and ignores subsequent input. */
     public void testQuitGame()
     {
-
-        view.setChoices("6");
-
+        view.setChoices("6", "1");
         controller.run();
-
         assertEquals(1, view.menuCount);
+        assertEquals(1, view.choiceIndex);
         assertEquals(0, model.getLine().length);
-
     }
 
 
-    /**
-     * Tests that invalid menu choices display an error and allow the user to
-     * choose again.
-     */
+    /** Invalid options report errors and allow another menu selection. */
     public void testInvalidChoice()
     {
-
-        view.setChoices("9", "abc", "", "6");
-
+        view.setChoices("9", "abc", "", " 7 ", "6");
         controller.run();
-
-        assertEquals(3, view.errorCount);
+        assertEquals(4, view.errorCount);
         assertEquals("Not a valid option.", view.lastError);
-        assertEquals(4, view.menuCount);
-
+        assertEquals(5, view.menuCount);
     }
 
 
-    /**
-     * Tests that a null menu choice displays an error.
-     */
+    /** A null choice is rejected, but does not stop the loop. */
     public void testNullChoice()
     {
-
-        view.setChoices(null, "6");
-
+        view.setChoices((String)null, "6");
         controller.run();
-
+        assertEquals(1, view.errorCount);
         assertEquals("Not a valid option.", view.lastError);
         assertEquals(2, view.menuCount);
-
     }
 
 
-    /**
-     * Tests that an invalid player name is rejected without changing the
-     * waiting line.
-     */
+    /** Blank names are rejected and the queue is unchanged. */
     public void testInvalidPlayer()
     {
-
         view.setChoices("1", "6");
         view.setNames("   ");
-
         controller.run();
+        assertEquals(0, model.getLine().length);
+        assertEquals(1, view.errorCount);
+        assertEquals("Please enter a valid name.", view.lastError);
+    }
 
+
+    /** Null names (including end of input) are rejected. */
+    public void testNullPlayerName()
+    {
+        view.setChoices("1", "6");
+        view.setNames((String)null);
+        controller.run();
         assertEquals(0, model.getLine().length);
         assertEquals("Please enter a valid name.", view.lastError);
-
     }
 
 
-    /**
-     * Tests that starting a race without enough players displays the model's
-     * error message.
-     */
+    /** Duplicate and invalid-format names do not alter the queue. */
+    public void testOtherInvalidPlayerNames()
+    {
+        model.addPlayer("Alex");
+        view.setChoices("1", "1", "1", "6");
+        view.setNames(" alex ", "!!!!", "abcdefghijklmnopqrstu");
+        controller.run();
+        assertEquals(3, view.errorCount);
+        assertEquals(1, model.getLine().length);
+        assertEquals("Alex", model.getLine()[0]);
+        assertEquals("Names must be 20 characters or fewer.", view.lastError);
+    }
+
+
+    /** Starting a race with too few players shows the exact model error. */
     public void testNotEnoughPlayers()
     {
-
         model.addPlayer("Alex");
-
         view.setChoices("3", "6");
-
         controller.run();
-
-        assertNotNull(view.lastError);
+        assertEquals(
+            "You must have two racers to start the first race.",
+            view.lastError);
+        assertEquals(1, view.errorCount);
+        assertEquals(0, view.raceCount);
         assertEquals(1, model.getLine().length);
-        assertEquals(2, view.menuCount);
-
     }
 
 
-    /**
-     * Tests that an invalid winner displays an error and does not change the
-     * champion.
-     */
+    /** A second race cannot begin before recording the first winner. */
+    public void testRaceAlreadyActive()
+    {
+        model.addPlayer("Alex");
+        model.addPlayer("Jordan");
+        view.setChoices("3", "3", "6");
+        controller.run();
+        assertEquals(1, view.raceCount);
+        assertEquals(1, view.errorCount);
+        assertTrue(view.lastError.contains("current race to finish"));
+        assertEquals("Jordan", model.recordWinner("Jordan"));
+    }
+
+
+    /** Recording a winner before starting a race is rejected. */
+    public void testRecordWinnerWithoutRace()
+    {
+        view.setChoices("4", "6");
+        view.setNames("Alex");
+        controller.run();
+        assertEquals("You must race before declaring a winner", view.lastError);
+        assertEquals(1, view.errorCount);
+        assertEquals(0, view.championCount);
+        assertNull(model.getChampion());
+    }
+
+
+    /** An unrelated winner cannot finish the active race. */
     public void testInvalidWinner()
     {
-
         model.addPlayer("Alex");
         model.addPlayer("Jordan");
         model.startNextRace();
-
         view.setChoices("4", "6");
         view.setNames("Sam");
-
         controller.run();
-
         assertEquals(
             "Winner must have participated in the recent race",
             view.lastError);
-
-        // startNextRace() already made Alex champion; a bad winner
-        // must not change that.
+        assertEquals(1, view.errorCount);
+        assertEquals(0, view.championCount);
         assertEquals("Alex", model.getChampion());
-
+        assertEquals(0, model.getStreak());
+        assertEquals("Jordan", model.recordWinner("Jordan"));
     }
 
-    // ~ Helper Classes ........................................................
 
-    /**
-     * Test version of ChallengerView that provides input and records output
-     * without using the keyboard. This assumes ChallengerView can be extended
-     * and has the methods listed in the project specification.
-     */
+    /** A null winner is rejected without ending the active race. */
+    public void testNullWinner()
+    {
+        model.addPlayer("Alex");
+        model.addPlayer("Jordan");
+        model.startNextRace();
+        view.setChoices("4", "6");
+        view.setNames((String)null);
+        controller.run();
+        assertEquals(
+            "Winner must have participated in the recent race",
+            view.lastError);
+        assertEquals(1, view.errorCount);
+        assertEquals("Alex", model.recordWinner("Alex"));
+    }
+
+
+    /** An invalid winner can be followed by a valid one in the same run. */
+    public void testRecoverAfterInvalidWinner()
+    {
+        model.addPlayer("Alex");
+        model.addPlayer("Jordan");
+        view.setChoices("3", "4", "4", "6");
+        view.setNames("Sam", "Jordan");
+        controller.run();
+        assertEquals(1, view.errorCount);
+        assertEquals(1, view.raceCount);
+        assertEquals(1, view.championCount);
+        assertEquals("Jordan", view.lastChampion);
+        assertEquals(1, model.getStreak());
+    }
+
+
+    /** The menu can play multiple races with a returning champion. */
+    public void testFullGameSequence()
+    {
+        view.setChoices("1", "1", "1", "2", "3", "4", "3", "4", "5", "6");
+        view.setNames("Alex", "Jordan", "Sam", "Jordan", "Jordan");
+        controller.run();
+        assertEquals(10, view.menuCount);
+        assertEquals(1, view.lineCount);
+        assertEquals(2, view.raceCount);
+        assertEquals("Jordan", view.lastChampion);
+        assertEquals(3, view.championCount);
+        assertEquals(2, model.getStreak());
+        assertEquals(0, model.getLine().length);
+        assertEquals(0, view.errorCount);
+    }
+
+    /** Fake view supplies scripted input and records observable output. */
     private static class TestView
         extends ChallengerView
     {
-
-        private String[] choices;
-        private String[] names;
-
+        private String[] choices = new String[0];
+        private String[] names = new String[0];
         private int choiceIndex;
         private int nameIndex;
-
         private int menuCount;
         private int errorCount;
         private int lineCount;
         private int raceCount;
-
+        private int championCount;
         private String lastError;
         private String lastChampion;
         private String[] lastLine;
         private String firstRacer;
         private String secondRacer;
 
-        /**
-         * Sets the menu choices for the test.
-         *
-         * @param values
-         *            the menu choices.
-         */
         public void setChoices(String... values)
         {
-
             choices = values;
             choiceIndex = 0;
-
         }
 
 
-        /**
-         * Sets the player names for the test.
-         *
-         * @param values
-         *            the player names.
-         */
         public void setNames(String... values)
         {
-
             names = values;
             nameIndex = 0;
-
         }
 
 
-        /**
-         * Records that the menu was displayed.
-         */
         @Override
         public void showMenu()
         {
-
             menuCount++;
-
         }
 
 
-        /**
-         * Returns the next menu choice.
-         *
-         * @return the next choice.
-         */
         @Override
         public String readChoice()
         {
-
             if (choiceIndex < choices.length)
             {
                 return choices[choiceIndex++];
             }
-
             return "6";
-
         }
 
 
-        /**
-         * Returns the next player name.
-         *
-         * @return the next name.
-         */
         @Override
         public String readName()
         {
-
-            return names[nameIndex++];
-
+            if (nameIndex < names.length)
+            {
+                return names[nameIndex++];
+            }
+            return null;
         }
 
 
-        /**
-         * Records the waiting line.
-         *
-         * @param line
-         *            the waiting players.
-         */
         @Override
         public void showLine(String[] line)
         {
-
             lastLine = line;
             lineCount++;
-
         }
 
 
-        /**
-         * Records the two racers.
-         *
-         * @param champion
-         *            the current champion.
-         * @param challenger
-         *            the next challenger.
-         */
         @Override
         public void showRace(String champion, String challenger)
         {
-
             firstRacer = champion;
             secondRacer = challenger;
             raceCount++;
-
         }
 
 
-        /**
-         * Records the displayed champion.
-         *
-         * @param champion
-         *            the champion's name.
-         */
         @Override
         public void showChampion(String champion)
         {
-
             lastChampion = champion;
-
+            championCount++;
         }
 
 
-        /**
-         * Records the error message.
-         *
-         * @param message
-         *            the error message.
-         */
         @Override
         public void showError(String message)
         {
-
             lastError = message;
             errorCount++;
-
         }
-
     }
-
 }

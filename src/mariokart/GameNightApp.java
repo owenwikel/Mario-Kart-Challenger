@@ -2,35 +2,25 @@
 package mariokart;
 
 /**
- * Starts the Mario Kart Challenger application. Creates the model, view, and
- * controller and connects them together before starting the game.
+ * Starts the Mario Kart Challenger application by connecting the model, view,
+ * and controller.
  *
  * @author Preston Moore
- * @version 2026.11.12
+ * @version 2026.11.19
  */
 public class GameNightApp
 {
-
-    // ~ Public Methods ........................................................
-
     /**
-     * Main method that starts the Mario Kart Challenger game. Creates the
-     * necessary objects and runs the controller.
+     * Starts the game and runs the menu until the user quits.
      *
      * @param args
-     *            command line arguments (not used).
+     *            command-line arguments (unused)
      */
     public static void main(String[] args)
     {
-
         ChallengerModel model = new ChallengerModel();
-
         ChallengerView view = new ChallengerView();
-
         ChallengerController controller = new ChallengerController(model, view);
-
         controller.run();
-
     }
-
 }
